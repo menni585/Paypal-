@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayPal - Mein Konto & Marktplatz</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f4f6f9;
+    }
+    .paypal-header { background-color: #003087; }
+    .paypal-btn { background-color: #0070ba; }
+    .paypal-btn:hover { background-color: #005ea6; }
+    .card-shadow { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+  </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col justify-between">
+
+  <!-- Benachrichtigungen / Toast Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- PayPal Navigation Header -->
+  <header class="paypal-header text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-2 font-bold text-2xl italic tracking-wide">
+          <i class="fab fa-paypal text-3xl text-blue-400"></i>
+          <span>PayPal</span>
+        </div>
+        <nav class="hidden md:flex space-x-3 text-sm font-semibold text-blue-100">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="hover:text-white px-3 py-1.5 rounded-lg bg-blue-900 bg-opacity-70 transition">Übersicht</button>
+          <button onclick="switchTab('sell')" id="nav-sell" class="hover:text-white px-3 py-1.5 rounded-lg hover:bg-blue-900/40 transition">Klamotten verkaufen</button>
+          <button onclick="switchTab('garage')" id="nav-garage" class="hover:text-white px-3 py-1.5 rounded-lg hover:bg-blue-900/40 transition">Autohaus</button>
+        </nav>
+      </div>
+
+      <!-- Live Guthaben Anzeige -->
+      <div class="flex items-center space-x-3">
+        <div class="text-right">
+          <div class="text-xs text-blue-200">Guthaben</div>
+          <div id="paypal-balance" class="text-lg md:text-xl font-extrabold text-white">1.250,00 €</div>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-blue-800 text-white flex items-center justify-center font-bold border border-blue-400 shadow-inner">
+          JD
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="flex md:hidden justify-around bg-blue-900 py-2.5 border-t border-blue-800 text-xs font-semibold text-blue-100">
+      <button onclick="switchTab('dashboard')" id="mobile-nav-dashboard" class="text-white">Übersicht</button>
+      <button onclick="switchTab('sell')" id="mobile-nav-sell">Verkaufen</button>
+      <button onclick="switchTab('garage')" id="mobile-nav-garage">Autohaus</button>
+    </div>
+  </header>
+
+  <!-- Hauptinhalt -->
+  <main class="max-w-6xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+    <!-- TAB 1: DASHBOARD & AKTIVITÄTEN -->
+    <div id="tab-dashboard" class="space-y-6">
+      
+      <!-- Guthaben & Schnellaktionen -->
+      <div class="bg-white rounded-2xl p-6 card-shadow flex flex-col md:flex-row justify-between items-center gap-6 border border-gray-100">
+        <div class="flex items-center space-x-4 w-full md:w-auto">
+          <div class="p-4 bg-blue-50 text-blue-600 rounded-2xl">
+            <i class="fas fa-wallet text-3xl"></i>
+          </div>
+          <div>
+            <h2 class="text-gray-500 font-semibold text-xs uppercase tracking-wider">PayPal-Guthaben verfügbar</h2>
+            <div id="main-balance-display" class="text-3xl md:text-4xl font-extrabold text-gray-900 mt-1">1.250,00 €</div>
+            <p class="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+              <i class="fas fa-check-circle"></i> Bereit für Zahlungen und Auszahlungen
+            </p>
+          </div>
+        </div>
+        <div class="flex space-x-3 w-full md:w-auto">
+          <button onclick="switchTab('sell')" class="paypal-btn text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition flex-1 md:flex-initial text-center">
+            <i class="fas fa-plus mr-1.5"></i> Klamotten inserieren
+          </button>
+          <button onclick="switchTab('garage')" class="bg-gray-900 hover:bg-black text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition flex-1 md:flex-initial text-center">
+            <i class="fas fa-car mr-1.5"></i> Autohaus öffnen
+          </button>
+        </div>
+      </div>
+
+      <!-- Aktive Angebote mit Live-Countdown (30s - 1m) -->
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-store text-blue-600"></i> Aktive Verkäufe auf dem Marktplatz
+          </h3>
+          <span id="active-count" class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">0 Inserate</span>
+        </div>
+
+        <div id="active-listings-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Platzhalter wenn leer -->
+          <div id="no-active-msg" class="col-span-full text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
+            <i class="fas fa-box-open text-4xl mb-2 text-gray-300"></i>
+            <p class="text-sm font-medium">Du hast derzeit keine Artikel online.</p>
+            <button onclick="switchTab('sell')" class="text-blue-600 font-bold text-xs mt-2 hover:underline inline-block">Jetzt Artikel zum Verkauf hochladen &rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Letzte Aktivitäten & Transaktionen -->
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100">
+        <h3 class="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <i class="fas fa-history text-gray-500"></i> Letzte Aktivitäten
+        </h3>
+        <div id="transaction-history" class="divide-y divide-gray-100">
+          <div class="py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                <i class="fas fa-arrow-down text-sm"></i>
+              </div>
+              <div>
+                <p class="font-bold text-sm text-gray-900">Startguthaben</p>
+                <p class="text-xs text-gray-400">PayPal Europe S.à r.l. et Cie, S.C.A.</p>
+              </div>
+            </div>
+            <span class="font-extrabold text-emerald-600 text-sm">+1.250,00 €</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: KLAMOTTEN VERKAUFEN -->
+    <div id="tab-sell" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 card-shadow max-w-xl mx-auto border border-gray-100">
+        <h2 class="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+          <i class="fas fa-tags text-blue-600"></i> Klamotten verkaufen
+        </h2>
+        <p class="text-gray-500 text-sm mb-6">Füge deine Kleidung hinzu. Interessenten kaufen deine Artikel automatisch innerhalb von 30 bis 60 Sekunden!</p>
+
+        <form id="sell-form" onsubmit="handleItemSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Produktname</label>
+            <input type="text" id="item-name" required placeholder="z. B. Nike Tech Fleece Anzug, Supreme Hoodie..." class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-gray-50/50">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Preis (€)</label>
+              <input type="number" id="item-price" min="5" step="0.5" required placeholder="z. B. 140" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-gray-50/50">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Zustand</label>
+              <select id="item-condition" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-gray-50/50">
+                <option value="Neu mit Etikett">Neu mit Etikett</option>
+                <option value="Sehr gut">Sehr gut</option>
+                <option value="Gut">Gut</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Produktbild auswählen</label>
+            <div class="grid grid-cols-4 gap-2 mb-3" id="preset-images">
+              <button type="button" onclick="selectPresetImg(this, 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400')" class="preset-btn border-2 border-blue-600 rounded-xl overflow-hidden h-20 relative focus:outline-none shadow-sm">
+                <img src="https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400" class="w-full h-full object-cover" alt="Hoodie">
+              </button>
+              <button type="button" onclick="selectPresetImg(this, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400')" class="preset-btn border-2 border-transparent hover:border-blue-300 rounded-xl overflow-hidden h-20 relative focus:outline-none shadow-sm">
+                <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" class="w-full h-full object-cover" alt="Sneaker">
+              </button>
+              <button type="button" onclick="selectPresetImg(this, 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=400')" class="preset-btn border-2 border-transparent hover:border-blue-300 rounded-xl overflow-hidden h-20 relative focus:outline-none shadow-sm">
+                <img src="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=400" class="w-full h-full object-cover" alt="Shirt">
+              </button>
+              <button type="button" onclick="selectPresetImg(this, 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400')" class="preset-btn border-2 border-transparent hover:border-blue-300 rounded-xl overflow-hidden h-20 relative focus:outline-none shadow-sm">
+                <img src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400" class="w-full h-full object-cover" alt="Jacke">
+              </button>
+            </div>
+            <input type="text" id="item-image-url" placeholder="Oder eigene Bild-URL einfügen..." class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50/50">
+          </div>
+
+          <button type="submit" class="w-full paypal-btn text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-98 flex items-center justify-center gap-2 text-sm">
+            <i class="fas fa-paper-plane"></i> Angebot auf Marktplatz stellen
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- TAB 3: AUTOHAUS -->
+    <div id="tab-garage" class="hidden space-y-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl card-shadow border border-gray-100">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900">Exklusives Autohaus</h2>
+          <p class="text-gray-500 text-sm">Kaufe Traumautos direkt mit deinem PayPal-Guthaben.</p>
+        </div>
+        <div class="bg-blue-50 border border-blue-100 px-5 py-2.5 rounded-xl text-right w-full md:w-auto">
+          <span class="text-xs text-blue-600 block font-semibold uppercase tracking-wide">Dein Budget</span>
+          <span id="garage-balance" class="text-xl font-extrabold text-blue-900">1.250,00 €</span>
+        </div>
+      </div>
+
+      <!-- Fahrzeug-Liste mit echten Bildern -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="cars-container">
+        <!-- Autos werden per JS geladen -->
+      </div>
+
+      <!-- Meine Garage -->
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gray-100 mt-8">
+        <h3 class="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="fas fa-warehouse text-amber-500"></i> Meine gekauften Fahrzeuge
+        </h3>
+        <div id="purchased-cars-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <p id="no-cars-msg" class="text-sm text-gray-400 col-span-full py-4 text-center">Du besitzt noch keine Autos in deiner Garage.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-gray-200 mt-12 py-6">
+    <div class="max-w-6xl mx-auto px-4 text-center text-xs text-gray-400 space-y-2">
+      <div class="flex justify-center space-x-6 font-semibold text-gray-500 mb-1">
+        <a href="#" class="hover:underline">Hilfe</a>
+        <a href="#" class="hover:underline">Datenschutz</a>
+        <a href="#" class="hover:underline">Cookies</a>
+        <a href="#" class="hover:underline">Impressum</a>
+      </div>
+      <p>&copy; 1999–2026 PayPal Inc. Alle Rechte vorbehalten.</p>
+    </div>
+  </footer>
+
+  <!-- Audio Effekt Skript -->
+  <script>
+    function playCashSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(750, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1350, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch(e) {}
+    }
+  </script>
+
+  <!-- App Hauptlogik -->
+  <script>
+    let balance = 1250.00;
+    let selectedImage = 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400';
+    let activeListings = [];
+    let myGarage = [];
+
+    const randomBuyers = [
+      "Maximilian S.", "Lisa M.", "Lukas B.", "Felix K.", 
+      "Sarah W.", "Tim H.", "Janina R.", "David O.",
+      "Alexander T.", "Laura P.", "Tobias M.", "Sophie N."
+    ];
+
+    const carsData = [
+      {
+        id: 'golf8',
+        name: 'VW Golf 8 GTI',
+        price: 35000,
+        hp: '245 PS',
+        img: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=600'
+      },
+      {
+        id: 'bmwm4',
+        name: 'BMW M4 Competition',
+        price: 85000,
+        hp: '510 PS',
+        img: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600'
+      },
+      {
+        id: 'audir8',
+        name: 'Audi R8 V10 Performance',
+        price: 145000,
+        hp: '620 PS',
+        img: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=600'
+      },
+      {
+        id: 'amggts',
+        name: 'Mercedes-AMG GT R',
+        price: 160000,
+        hp: '585 PS',
+        img: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600'
+      },
+      {
+        id: 'porsche911',
+        name: 'Porsche 911 GT3 RS',
+        price: 230000,
+        hp: '525 PS',
+        img: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?w=600'
+      },
+      {
+        id: 'ferrari',
+        name: 'Ferrari F8 Tributo',
+        price: 280000,
+        hp: '720 PS',
+        img: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=600'
+      }
+    ];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateBalanceDisplays();
+      renderCars();
+    });
+
+    function switchTab(tab) {
+      ['dashboard', 'sell', 'garage'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`nav-${t}`).classList.remove('bg-blue-900', 'bg-opacity-70', 'text-white');
+        document.getElementById(`mobile-nav-${t}`).classList.remove('text-white');
+      });
+
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      document.getElementById(`nav-${tab}`).classList.add('bg-blue-900', 'bg-opacity-70', 'text-white');
+      document.getElementById(`mobile-nav-${tab}`).classList.add('text-white');
+    }
+
+    function formatMoney(amount) {
+      return amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €
